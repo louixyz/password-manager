@@ -1,10 +1,10 @@
 '''
 title: 密码本管理工具
 filename: password_manager.py
-version: 0.2
+version: 0.3
 author: louixyz
 timestamp: 2025-04-16
-note: CLI 密码本，支持随机密码生成、唯一记录 hash、备注字段
+note: CLI 密码本，支持添加/查看/删除/搜索记录，随机密码生成与 hash 唯一标识
 '''
 
 import json
@@ -29,7 +29,6 @@ PASSWORD_OPTIONS = {
 
 def load_data():
     if not os.path.exists(DATA_FILE):
-        # 自动初始化空文件
         with open(DATA_FILE, 'w', encoding='utf-8') as f:
             json.dump([], f, ensure_ascii=False, indent=2)
         return []
@@ -100,12 +99,45 @@ def list_entries():
     print("-" * 40)
 
 
+def delete_entry():
+    data = load_data()
+    keyword = input("请输入要删除的记录的 ID 或 hash（支持前缀匹配）：").strip()
+    new_data = [item for item in data if not (item['id'] == keyword or item['hash'].startswith(keyword))]
+
+    if len(new_data) == len(data):
+        print("⚠️ 没有找到匹配的记录。")
+    else:
+        save_data(new_data)
+        print(f"🗑️ 已删除 {len(data) - len(new_data)} 条记录。")
+
+
+def search_entries():
+    data = load_data()
+    keyword = input("请输入关键词（支持用户名、邮箱、备注模糊匹配）：").strip().lower()
+    results = [item for item in data if
+               keyword in item.get("username", "").lower()
+               or keyword in item.get("email", "").lower()
+               or keyword in item.get("note", "").lower()]
+
+    if not results:
+        print("🔍 没有找到匹配的记录。")
+        return
+    print(f"🔍 找到 {len(results)} 条匹配记录：")
+    for item in results:
+        print("-" * 40)
+        for k, v in item.items():
+            print(f"{k}: {v}")
+    print("-" * 40)
+
+
 def main():
     while True:
         print("\n📘 密码本管理工具")
         print("1. 添加记录")
         print("2. 查看所有记录")
-        print("3. 退出")
+        print("3. 搜索记录")
+        print("4. 删除记录")
+        print("5. 退出")
         choice = input("> ").strip()
 
         if choice == '1':
@@ -113,6 +145,10 @@ def main():
         elif choice == '2':
             list_entries()
         elif choice == '3':
+            search_entries()
+        elif choice == '4':
+            delete_entry()
+        elif choice == '5':
             print("👋 再见！")
             break
         else:
